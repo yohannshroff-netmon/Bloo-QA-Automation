@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('selected-export', async ({ page }) => {
+test('dashboard-export-selected', async ({ page }) => {
   await page.goto('https://bloo-qa.dnifuat.com/#/auth/login');
   await page.getByRole('textbox', { name: 'you@company.com' }).click();
   await page.getByRole('textbox', { name: 'you@company.com' }).fill('yohann.shroff@bloo.io');

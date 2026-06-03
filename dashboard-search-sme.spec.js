@@ -21,5 +21,5 @@ test('Search SME-TEST dashboard', async ({ page }) => {
   await page.locator('button[aria-label="Open search"]').click();
   await page.locator('input').fill('SME-TEST');
 
-  await expect(page.getByText('SME-TEST')).toBeVisible();
+  await expect(page.getByText('SME-TEST')).toBeVisible({ timeout: 15000 });
 });

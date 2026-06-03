@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('list-export', async ({ page }) => {
+test('dashboard-export-modal', async ({ page }) => {
   // --- Login ---
   await page.goto('https://bloo-qa.dnifuat.com/#/auth/login', { waitUntil: 'domcontentloaded', timeout: 60000 });
   await expect(page.getByRole('textbox', { name: 'you@company.com' })).toBeVisible({ timeout: 15000 });
