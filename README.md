@@ -58,7 +58,7 @@ npx playwright test --project=webkit
 - **dashboard-author-filter.spec.js** — Tests opening and interacting with the Author filter.
 - **dashboard-useraccess-filter.spec.js** — Tests opening and interacting with the User Access filter.
 - **dashboard-import-modal.spec.js** — Tests opening the Import modal and verifying supported file formats.
-- **main-test.spec.js** — Comprehensive integration test covering dark/light mode toggle, multiple filters (Type, Author), data refresh, and user interactions.
+- **main-test.spec.js** — Comprehensive integration test covering dark/light mode toggle, data refresh, and user interactions.
 
 ## Configuration
 
