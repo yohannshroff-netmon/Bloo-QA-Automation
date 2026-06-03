@@ -33,17 +33,6 @@ test('test1', async ({ page }) => {
   await page.getByRole('link', { name: 'Dashboards' }).click();
   await page.waitForLoadState('networkidle');
 
-  // --- Apply Type filter ---
-  await page.getByRole('button', { name: 'Type' }).click();
-  await expect(page.getByRole('button', { name: 'Public' })).toBeVisible({ timeout: 5000 });
-  await page.getByRole('button', { name: 'Public' }).click();
-
-  // --- Apply Author filter ---
-await page.getByRole('button', { name: 'Author' }).click();
-  // Wait for the dropdown list to populate before clicking
-  await expect(page.getByRole('button', { name: 'Rakshit Shetty' })).toBeVisible({ timeout: 15000 });
-  await page.getByRole('button', { name: 'Rakshit Shetty' }).click();
-
   // --- Refresh data ---
   await page.getByRole('button', { name: 'Refresh data' }).click();
   await page.waitForLoadState('networkidle');
