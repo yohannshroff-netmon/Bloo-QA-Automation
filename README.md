@@ -26,9 +26,8 @@ npx playwright test
 
 ### Run a single test file
 ```bash
-npx playwright test dashboard-page-load.spec.js
+npx playwright test siem-dashboard.spec.js
 ```
-
 ### Run tests in headed mode (see browser)
 ```bash
 npx playwright test --headed
@@ -36,7 +35,7 @@ npx playwright test --headed
 
 ### Run with debug mode
 ```bash
-PWDEBUG=1 npx playwright test dashboard-page-load.spec.js
+PWDEBUG=1 npx playwright test siem-dashboard.spec.js
 ```
 
 ### Run tests in specific browser
@@ -47,18 +46,20 @@ npx playwright test --project=webkit
 ```
 
 ## Test Files
-
-### Core Tests (Production)
+Core Tests (Production)
+All dashboard tests are consolidated into a single Playwright spec:
+* **siem-dashboard.spec.js** — Contains all Dashboard test cases, including:
 - **dashboard-page-load.spec.js** — Verifies the dashboard page loads and displays the correct heading.
 - **dashboard-export-modal.spec.js** — Tests exporting the dashboard list (no row selected) as PDF via modal.
 - **dashboard-export-selected.spec.js** — Tests exporting a selected dashboard row as tar.gz archive.
+- **dashboard-search-and-filter** — Comprehensive search and filter validation including exact, partial, case-insensitive, empty-result searches, filter combinations, filter reset, and filter persistence.
 - **dashboard-search-sme.spec.js** — Tests searching for "SME-TEST" dashboard in the table.
 - **dashboard-search-identity.spec.js** — Tests searching for "Identity and Access Monitoring" dashboard.
 - **dashboard-type-filter.spec.js** — Tests opening and interacting with the Type filter.
 - **dashboard-author-filter.spec.js** — Tests opening and interacting with the Author filter.
 - **dashboard-useraccess-filter.spec.js** — Tests opening and interacting with the User Access filter.
 - **dashboard-import-modal.spec.js** — Tests opening the Import modal and verifying supported file formats.
-- **main-test.spec.js** — Comprehensive integration test covering dark/light mode toggle, data refresh, and user interactions.
+- **dashboard-misc.spec.js** — Comprehensive integration test covering dark/light mode toggle, data refresh, and user interactions.
 - **dashboard-create-delete.spec.js** — Tests the dashboard lifecycle by creating a dashboard, adding and removing widgets, saving the dashboard, verifying it appears in the list, deleting it, and refreshing the dashboard table to confirm cleanup.
 
 ## Configuration
@@ -160,7 +161,7 @@ Ensure Node.js >= 18 is available in the CI environment.
 ## Maintenance
 
 ### Adding new tests
-1. Create a new `.spec.js` file in this directory.
+1. Add the new test inside siem-dashboard.spec.js.
 2. Follow the existing pattern:
 - Login
 - Navigate
