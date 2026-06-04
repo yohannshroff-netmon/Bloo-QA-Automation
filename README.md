@@ -59,6 +59,7 @@ npx playwright test --project=webkit
 - **dashboard-useraccess-filter.spec.js** — Tests opening and interacting with the User Access filter.
 - **dashboard-import-modal.spec.js** — Tests opening the Import modal and verifying supported file formats.
 - **main-test.spec.js** — Comprehensive integration test covering dark/light mode toggle, data refresh, and user interactions.
+- **dashboard-create-delete.spec.js** — Tests the dashboard lifecycle by creating a dashboard, adding and removing widgets, saving the dashboard, verifying it appears in the list, deleting it, and refreshing the dashboard table to confirm cleanup.
 
 ## Configuration
 
@@ -160,10 +161,19 @@ Ensure Node.js >= 18 is available in the CI environment.
 
 ### Adding new tests
 1. Create a new `.spec.js` file in this directory.
-2. Follow the existing pattern: login → navigate → interact → assert.
-3. Use role-based and accessible selectors.
-4. Add descriptive comments for each section.
-5. Update this README with the test description.
+2. Follow the existing pattern:
+- Login
+- Navigate
+- Interact
+- Assert
+- Cleanup any created test data
+3. Use role-based and accessible selectors whenever possible.
+4. Prefer scoped locators (filter({ has: ... })) over brittle CSS chains.
+5. Update this README with:
+- Test purpose
+- Main workflow
+- Any special selector or timing considerations
+6. Ensure tests leave the environment in the same state they found it (delete created dashboards, reports, etc.).
 
 ### Updating selectors
 - If the app UI changes, update selectors in affected tests.
