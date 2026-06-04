@@ -7,4 +7,3 @@ export default defineConfig({
     actionTimeout: 15000,     // for clicks, fills, etc.
   },
 });
- 
