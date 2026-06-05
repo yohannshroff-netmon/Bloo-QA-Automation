@@ -59,6 +59,7 @@ All dashboard tests are consolidated into a single Playwright spec:
 - **dashboard-useraccess-filter** — Tests opening and interacting with the User Access filter.
 - **dashboard-import-modal** — Tests opening the import modal and verifying supported file formats.
 - **dashboard-misc** — Comprehensive integration test covering dark/light mode toggle, data refresh, and user interactions.
+- **dashboard-open-verify** — Verifies a dashboard can be located from the dashboard listing, validates its metadata (Type and Author), opens the dashboard by clicking its name, confirms successful navigation to the dashboard details page, and verifies the dashboard finishes loading.
 - **dashboard-create-delete** — Tests the dashboard lifecycle by creating a dashboard, adding and removing widgets, saving the dashboard, verifying it appears in the list, deleting it, and refreshing the dashboard table to confirm cleanup.
 - **dashboard-search-and-filter** — Comprehensive search and filter validation including exact, partial, case-insensitive, empty-result searches, filter combinations, filter reset, and filter persistence.
 
