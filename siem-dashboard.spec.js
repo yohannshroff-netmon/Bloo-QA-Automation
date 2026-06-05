@@ -297,10 +297,10 @@ await page.goto('https://bloo-qa.dnifuat.com/#/auth/login');
   await page.getByRole('button', { name: 'SIEM' }).click();
   await page.getByRole('link', { name: 'Dashboards' }).click();
 
-  const dashboardName = 'SME-TEST';
+  const dashboardName = 'Playwright-Test';
 
   // Find dashboard name in listing
- const dashboard = page.getByRole('button', { name: 'SME-TEST' });
+ const dashboard = page.getByRole('button', { name: 'Playwright-Test' });
 
 // climb until you find a container that contains the entire row
 const row = dashboard.locator('xpath=ancestor::div[contains(.,"Public") or contains(.,"Private")][1]');
