@@ -49,18 +49,18 @@ npx playwright test --project=webkit
 Core Tests (Production)
 All dashboard tests are consolidated into a single Playwright spec:
 * **siem-dashboard.spec.js** — Contains all Dashboard test cases, including:
-- **dashboard-page-load.spec.js** — Verifies the dashboard page loads and displays the correct heading.
-- **dashboard-export-modal.spec.js** — Tests exporting the dashboard list (no row selected) as PDF via modal.
-- **dashboard-export-selected.spec.js** — Tests exporting a selected dashboard row as tar.gz archive.
+- **dashboard-page-load** — Verifies the dashboard page loads and displays the correct heading.
+- **dashboard-export-modal** — Tests exporting the dashboard list (no row selected) as PDF via modal.
+- **dashboard-export-selected** — Tests exporting a selected dashboard row as tar.gz archive.
+- **dashboard-search-sme** — Tests searching for "SME-TEST" dashboard in the table.
+- **dashboard-search-identity** — Tests searching for "Identity and Access Monitoring" dashboard.
+- **dashboard-type-filter** — Tests opening and interacting with the Type filter.
+- **dashboard-author-filter** — Tests opening and interacting with the Author filter.
+- **dashboard-useraccess-filter** — Tests opening and interacting with the User Access filter.
+- **dashboard-import-modal** — Tests opening the import modal and verifying supported file formats.
+- **dashboard-misc** — Comprehensive integration test covering dark/light mode toggle, data refresh, and user interactions.
+- **dashboard-create-delete** — Tests the dashboard lifecycle by creating a dashboard, adding and removing widgets, saving the dashboard, verifying it appears in the list, deleting it, and refreshing the dashboard table to confirm cleanup.
 - **dashboard-search-and-filter** — Comprehensive search and filter validation including exact, partial, case-insensitive, empty-result searches, filter combinations, filter reset, and filter persistence.
-- **dashboard-search-sme.spec.js** — Tests searching for "SME-TEST" dashboard in the table.
-- **dashboard-search-identity.spec.js** — Tests searching for "Identity and Access Monitoring" dashboard.
-- **dashboard-type-filter.spec.js** — Tests opening and interacting with the Type filter.
-- **dashboard-author-filter.spec.js** — Tests opening and interacting with the Author filter.
-- **dashboard-useraccess-filter.spec.js** — Tests opening and interacting with the User Access filter.
-- **dashboard-import-modal.spec.js** — Tests opening the Import modal and verifying supported file formats.
-- **dashboard-misc.spec.js** — Comprehensive integration test covering dark/light mode toggle, data refresh, and user interactions.
-- **dashboard-create-delete.spec.js** — Tests the dashboard lifecycle by creating a dashboard, adding and removing widgets, saving the dashboard, verifying it appears in the list, deleting it, and refreshing the dashboard table to confirm cleanup.
 
 ## Configuration
 
