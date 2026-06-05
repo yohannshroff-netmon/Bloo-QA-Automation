@@ -320,6 +320,29 @@ await expect(
 });
 
 
+test('dashboard-create', async ({ page }) => {
+  test.setTimeout(120000);
+
+  await page.goto('https://bloo-qa.dnifuat.com/#/auth/login');
+  await page.getByRole('textbox', { name: 'you@company.com' }).fill('yohann.shroff@bloo.io');
+  await page.getByRole('textbox', { name: 'you@company.com' }).press('Enter');
+  await page.getByRole('textbox', { name: '••••••••' }).click();
+  await page.getByRole('textbox', { name: '••••••••' }).fill('Doctorwho@6c');
+  await page.getByRole('button', { name: 'Sign In' }).click();
+  await page.getByRole('button', { name: 'SIEM' }).click();
+  await page.getByRole('link', { name: 'Dashboards' }).click({ timeout: 15000 });
+  await page.getByRole('button', { name: 'Add Dashboard' }).click();
+  await page.getByRole('button', { name: 'Add Widget' }).first().click();
+  await page.getByRole('button', { name: 'Top 10 Email Deletion Metrics' }).click({ timeout: 15000 });
+  await page.getByRole('button', { name: 'Top 10 Email Deletion Metrics' }).click({ timeout: 15000 });
+  await page.getByRole('button', { name: 'Threat Alerts by Source Types' }).click({ timeout: 15000 });
+  await page.getByRole('button', { name: 'Top 10 Email Deletion Metrics' }).click({ timeout: 15000 });
+  await page.getByRole('button', { name: 'Done' }).click();
+  await page.getByRole('textbox', { name: 'Dashboard name…' }).click();
+  await page.getByRole('textbox', { name: 'Dashboard name…' }).fill('Playwright-Test');
+  await page.getByRole('button', { name: 'Save Dashboard' }).click({timeout: 30000});
+});
+
 test('dashboard-create-delete', async ({ page }) => {
   test.setTimeout(120000);
 
@@ -339,7 +362,7 @@ test('dashboard-create-delete', async ({ page }) => {
   await page.getByRole('button', { name: 'Top 10 Email Deletion Metrics' }).click({ timeout: 15000 });
   await page.getByRole('button', { name: 'Done' }).click();
   await page.getByRole('textbox', { name: 'Dashboard name…' }).click();
-  await page.getByRole('textbox', { name: 'Dashboard name…' }).fill('PW-E2E-Test');
+  await page.getByRole('textbox', { name: 'Dashboard name…' }).fill('PW-Temp-Test');
 
 const widgetCard = page
   .locator('[class*="chart-card"], [class*="widget"]')
@@ -351,17 +374,24 @@ await expect(widgetCard).toBeVisible();
 // Click the last action button in the widget header
 await widgetCard.getByRole('button').last().click();
 
-await page.getByRole('button', { name: 'Save Dashboard' }).click({timeout: 30000});
+await page.getByRole('button', { name: 'Save Dashboard' }).click({
+  timeout: 30000
+});
 
-await page.getByText('PW-E2E-Test').click({timeout: 15000});
+// wait for dashboard list to reappear
+await page.getByRole('link', { name: 'Dashboards' }).first().click();
 
-await page.getByRole('button', { name: 'Delete' }).first().click();
-await page.getByRole('button', { name: 'Delete' }).click();
+const dashboard = page.getByRole('button', {
+  name: 'PW-Temp-Test'
+});
+
+await expect(dashboard).toBeVisible({ timeout: 30000 });
+
+// delete directly from dashboard list
 await page
-  .getByRole('row', { name: 'Select row SME-TEST Public -' })
-  .getByLabel('Select row')
+  .getByRole('button', { name: 'Delete' })
+  .last()
   .click();
-await page.getByRole('button', { name: 'Refresh data' }).click();
 });
 
 
