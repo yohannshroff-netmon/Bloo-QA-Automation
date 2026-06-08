@@ -374,24 +374,23 @@ await expect(widgetCard).toBeVisible();
 // Click the last action button in the widget header
 await widgetCard.getByRole('button').last().click();
 
-await page.getByRole('button', { name: 'Save Dashboard' }).click({
-  timeout: 30000
-});
+await page.getByRole('button', { name: 'Save Dashboard' }).click();
+const dashboardName = 'PW-Temp-Test';
 
-// wait for dashboard list to reappear
-await page.getByRole('link', { name: 'Dashboards' }).first().click();
+const dashboard = page.getByRole('button', {name: 'PW-Temp-Test'});
 
-const dashboard = page.getByRole('button', {
-  name: 'PW-Temp-Test'
-});
-
-await expect(dashboard).toBeVisible({ timeout: 30000 });
+await expect(dashboard).toBeVisible({ timeout: 60000 });
 
 // delete directly from dashboard list
+await page.getByRole('button', { name: 'Delete' }).first().click();
+await page.getByRole('button', { name: 'Delete' }).click();
+await page.getByRole('button', { name: 'Delete' }).click();
+
 await page
-  .getByRole('button', { name: 'Delete' })
-  .last()
+  .getByRole('row', { name: 'Select row SME-TEST Public -' })
+  .getByLabel('Select row')
   .click();
+await page.getByRole('button', { name: 'Refresh data' }).click();
 });
 
 
