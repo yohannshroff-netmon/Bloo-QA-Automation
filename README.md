@@ -46,23 +46,13 @@ npx playwright test --project=webkit
 ```
 
 ## Test Files
-Core Tests (Production)
-All dashboard tests are consolidated into a single Playwright spec:
-* **siem-dashboard.spec.js** — Contains all Dashboard test cases, including:
-- **dashboard-page-load** — Verifies the dashboard page loads and displays the correct heading.
-- **dashboard-export-modal** — Tests exporting the dashboard list (no row selected) as PDF via modal.
-- **dashboard-export-selected** — Tests exporting a selected dashboard row as tar.gz archive.
-- **dashboard-search-sme** — Tests searching for "SME-TEST" dashboard in the table.
-- **dashboard-search-identity** — Tests searching for "Identity and Access Monitoring" dashboard.
-- **dashboard-type-filter** — Tests opening and interacting with the Type filter.
-- **dashboard-author-filter** — Tests opening and interacting with the Author filter.
-- **dashboard-useraccess-filter** — Tests opening and interacting with the User Access filter.
-- **dashboard-import-modal** — Tests opening the import modal and verifying supported file formats.
-- **dashboard-misc** — Comprehensive integration test covering dark/light mode toggle, data refresh, and user interactions.
-- **dashboard-open-verify** — Verifies a dashboard can be located from the dashboard listing, validates its metadata (Type and Author), opens the dashboard by clicking its name, confirms successful navigation to the dashboard details page, and verifies the dashboard finishes loading.
-- **dashboard-create** — Tests dashboard creation by adding widgets, configuring the dashboard name, removing a widget, saving the dashboard, and verifying the save operation completes successfully.
-- **dashboard-create-delete** — Tests the dashboard lifecycle by creating a dashboard, adding and removing widgets, saving the dashboard, verifying it appears in the list, deleting it, and refreshing the dashboard table to confirm cleanup.
-- **dashboard-search-and-filter** — Comprehensive search and filter validation including exact, partial, case-insensitive, empty-result searches, filter combinations, filter reset, and filter persistence.
+### Core Tests (Production)
+- **siem-dashboard.spec.js** — Comprehensive suite for SIEM Dashboards, covering creation, deletion, filtering, and export.
+- **siem-workbook.spec.js** — Comprehensive suite for SIEM Workbooks, covering listing, search, folder management, and bulk actions.
+
+## Documentation
+- **GEMINI.md** — Project-wide context, conventions, and module index.
+- **SIEM-WORKBOOKS-CONTEXT.md** — Detailed architectural and functional mapping for the Workbooks module.
 
 ## Configuration
 
@@ -70,65 +60,18 @@ All dashboard tests are consolidated into a single Playwright spec:
 - **timeout**: 60s per test
 - **navigationTimeout**: 60s for page.goto() and navigations
 - **actionTimeout**: 15s for clicks, fills, etc.
-
-Adjust timeouts in `playwright.config.ts` if tests run on slower networks or servers.
-
-## Test Patterns & Best Practices
-
-### Selectors
-- Prefer role-based selectors: `getByRole('button', { name: 'Export data' })`
-- Use accessible labels: `getByLabel('Select row')`
-- Avoid brittle nth() or generic div filters when possible
-
-### Waits
-- Always wait for page load after navigation: `await page.waitForLoadState('networkidle')`
-- Poll for enabled state rather than relying on single selectors:
-  ```javascript
-  let enabled = false;
-  for (let i = 0; i < 30; i++) {
-    if (await exportButton.isEnabled()) {
-      enabled = true;
-      break;
-    }
-    await page.waitForTimeout(1000);
-  }
-  expect(enabled).toBeTruthy();
-  ```
-
-### Modal Handling
-- Wait for a visible child element (heading, button) inside the modal.
-- Use ancestor XPath to scope the dialog if needed:
-  ```javascript
-  const exportDialog = dialogHeading.locator('xpath=ancestor::div[@role="dialog"]').first();
-  ```
-
-### Download Handling
-- Use `Promise.all()` to wait for download event and click in parallel:
-  ```javascript
-  const [download] = await Promise.all([
-    page.waitForEvent('download', { timeout: 60000 }),
-    exportDialog.getByRole('button', { name: /^Export$/ }).click()
-  ]);
-  ```
-
-### Error Handling
-- Use try/catch for optional UI flows (e.g., modal may or may not appear):
-  ```javascript
-  try {
-    await dialogHeading.waitFor({ state: 'visible', timeout: 5000 });
-    // interact with modal
-  } catch {
-    // fallback: direct download or alternative flow
-  }
-  ```
+- **Environment Variables**: Loads variables from `.env` using `dotenv`.
 
 ## Credentials
 
-Tests use a shared test account:
-- **Email**: `yohann.shroff@bloo.io`
-- **Password**: `Doctorwho@6c`
+Tests use environment variables for authentication. Create a `.env` file in the root directory:
 
-**Note**: Hardcoded credentials in tests are acceptable for QA environments only. For production, use environment variables or a secrets manager.
+```env
+BLOOTEST_EMAIL=your-email@bloo.io
+BLOOTEST_PASSWORD=your-password
+```
+
+**Note**: The `.env` file is excluded from version control via `.gitignore`.
 
 ## CI/CD Integration
 

@@ -1,4 +1,5 @@
 import { defineConfig } from '@playwright/test';
+import 'dotenv/config';
  
 export default defineConfig({
   timeout: 60000,           // per-test timeout (60s)

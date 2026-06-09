@@ -1,20 +1,28 @@
 import { test, expect } from '@playwright/test';
 
-test('dashboard-author-filter', async ({ page }) => {
+const EMAIL = process.env.BLOOTEST_EMAIL;
+const PASSWORD = process.env.BLOOTEST_PASSWORD;
+const BASE_URL = 'https://bloo-qa.dnifuat.com';
 
-  // --- Login ---
-  await page.goto('https://bloo-qa.dnifuat.com/#/auth/login', { waitUntil: 'domcontentloaded', timeout: 60000 });
+async function login(page) {
+  await page.goto(`${BASE_URL}/#/auth/login`, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await expect(page.getByRole('textbox', { name: 'you@company.com' })).toBeVisible({ timeout: 15000 });
-  await page.getByRole('textbox', { name: 'you@company.com' }).fill('yohann.shroff@bloo.io');
+  await page.getByRole('textbox', { name: 'you@company.com' }).fill(EMAIL);
   await page.getByRole('button', { name: 'Continue with Password' }).click();
-  await page.getByRole('textbox', { name: '••••••••' }).fill('Doctorwho@6c');
+  await page.getByRole('textbox', { name: '••••••••' }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Sign In' }).click();
   await page.waitForLoadState('networkidle');
+}
 
-  // Navigate to Dashboards
+async function gotoDashboards(page) {
   await page.getByRole('button', { name: 'SIEM' }).click();
   await page.getByRole('link', { name: 'Dashboards' }).click();
   await page.waitForLoadState('networkidle');
+}
+
+test('dashboard-author-filter', async ({ page }) => {
+  await login(page);
+  await gotoDashboards(page);
 
   // Open Author filter
   await page.getByRole('button', { name: 'Author' }).click();
@@ -24,22 +32,9 @@ test('dashboard-author-filter', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Save Filter' })).toBeVisible();
 });
 
-
-
 test('dashboard-export-modal', async ({ page }) => {
-  // --- Login ---
-  await page.goto('https://bloo-qa.dnifuat.com/#/auth/login', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await expect(page.getByRole('textbox', { name: 'you@company.com' })).toBeVisible({ timeout: 15000 });
-  await page.getByRole('textbox', { name: 'you@company.com' }).fill('yohann.shroff@bloo.io');
-  await page.getByRole('button', { name: 'Continue with Password' }).click();
-  await page.getByRole('textbox', { name: '••••••••' }).fill('Doctorwho@6c');
-  await page.getByRole('button', { name: 'Sign In' }).click();
-  await page.waitForLoadState('networkidle');
-
-  // --- Navigate to Dashboards ---
-  await page.getByRole('button', { name: 'SIEM' }).click();
-  await page.getByRole('link', { name: 'Dashboards' }).click();
-  await page.waitForLoadState('networkidle');
+  await login(page);
+  await gotoDashboards(page);
 
   // --- Wait for Export button enabled then click ---
   const exportButton = page.getByRole('button', { name: 'Export data' });
@@ -71,23 +66,10 @@ test('dashboard-export-modal', async ({ page }) => {
   expect(filename).toBeTruthy();
 });
 
-
-
 test('dashboard-export-selected', async ({ page }) => {
-  await page.goto('https://bloo-qa.dnifuat.com/#/auth/login');
-  await page.getByRole('textbox', { name: 'you@company.com' }).click();
-  await page.getByRole('textbox', { name: 'you@company.com' }).fill('yohann.shroff@bloo.io');
-  await page.getByRole('button', { name: 'Continue with Password' }).click();
-  await page.getByRole('textbox', { name: '••••••••' }).click({
-    modifiers: ['Shift']
-  });
-  await page.getByRole('textbox', { name: '••••••••' }).click();
-  await page.getByRole('textbox', { name: '••••••••' }).fill('Doctorwho@6c');
-  await page.getByRole('textbox', { name: '••••••••' }).press('Enter');
-  await page.getByRole('button', { name: 'Sign In' }).click();
-  await page.getByRole('button', { name: 'SIEM' }).click();
-  await page.getByRole('navigation').getByText('DashboardsWorkbooksReportsMITRE ATT&CK').click();
-  await page.getByRole('link', { name: 'Dashboards' }).click();
+  await login(page);
+  await gotoDashboards(page);
+
   await page.getByRole('row', { name: 'Select row SME-TEST Public -' }).getByLabel('Select row').click();
   await page.getByRole('button', { name: 'Export data' }).click();
   await page.locator('div').filter({ hasText: /^Export Dashboards as tar\.gz$/ }).first().click();
@@ -98,28 +80,9 @@ test('dashboard-export-selected', async ({ page }) => {
   await page.getByRole('row', { name: 'Select row SME-TEST Public -' }).getByLabel('Select row').click();
 });
 
-
-
-
 test('dashboard-misc', async ({ page }) => {
-  // --- Login ---
-  await page.goto('https://bloo-qa.dnifuat.com/#/auth/login', {
-    waitUntil: 'domcontentloaded',  // don't wait for all assets, just the DOM
-    timeout: 60000                  // give it 60s instead of the default 30s
-  });
-  // Wait for the login form to actually be ready before interacting
-  await expect(
-    page.getByRole('textbox', { name: 'you@company.com' })
-  ).toBeVisible({ timeout: 15000 });
+  await login(page);
 
-  // rest of test unchanged...
-   await page.getByRole('textbox', { name: 'you@company.com' }).fill('yohann.shroff@bloo.io');
-  await page.getByRole('button', { name: 'Continue with Password' }).click();
-  await page.getByRole('textbox', { name: '••••••••' }).fill('Doctorwho@6c');
-  await page.getByRole('button', { name: 'Sign In' }).click();
-
-  // Wait for app to fully load after login
-  await page.waitForLoadState('networkidle');
   await expect(page.getByRole('button', { name: 'Open user menu' })).toBeVisible({ timeout: 15000 });
 
   // --- Dark / Light mode toggle ---
@@ -130,9 +93,7 @@ test('dashboard-misc', async ({ page }) => {
   await page.getByRole('button', { name: 'Light Mode' }).click();
 
   // --- Navigate to SIEM > Dashboards ---
-  await page.getByRole('button', { name: 'SIEM' }).click();
-  await page.getByRole('link', { name: 'Dashboards' }).click();
-  await page.waitForLoadState('networkidle');
+  await gotoDashboards(page);
 
   // --- Refresh data ---
   await page.getByRole('button', { name: 'Refresh data' }).click();
@@ -146,56 +107,23 @@ test('dashboard-misc', async ({ page }) => {
 
   // --- Sign out ---
   await page.getByRole('button', { name: 'Open user menu' }).click();
-   await page.getByRole('button', { name: 'Open user menu' }).click();
   await expect(
     page.getByRole('button', { name: 'Sign out' })
   ).toBeVisible({ timeout: 10000 });
   await page.getByRole('button', { name: 'Sign out' }).click();
 });
 
-
-
 test('dashboard-page-load', async ({ page }) => {
-
-  // --- Login ---
-  await page.goto('https://bloo-qa.dnifuat.com/#/auth/login', {
-    waitUntil: 'domcontentloaded',
-    timeout: 60000
-  });
-
-  await expect(page.getByRole('textbox', { name: 'you@company.com' })).toBeVisible({ timeout: 15000 });
-  await page.getByRole('textbox', { name: 'you@company.com' }).fill('yohann.shroff@bloo.io');
-  await page.getByRole('button', { name: 'Continue with Password' }).click();
-  await page.getByRole('textbox', { name: '••••••••' }).fill('Doctorwho@6c');
-  await page.getByRole('button', { name: 'Sign In' }).click();
-
-  // wait for app to load
-  await page.waitForLoadState('networkidle');
-
-  // Navigate to SIEM -> Dashboards
-  await page.getByRole('button', { name: 'SIEM' }).click();
-  await page.getByRole('link', { name: 'Dashboards' }).click();
-  await page.waitForLoadState('networkidle');
+  await login(page);
+  await gotoDashboards(page);
 
   // Use a unique page text to assert the page loaded (avoid ambiguous getByText('Dashboards'))
   await expect(page.getByText('Manage and view your security dashboards')).toBeVisible();
 });
 
 test('dashboard-search-identity', async ({ page }) => {
-
-  // --- Login ---
-  await page.goto('https://bloo-qa.dnifuat.com/#/auth/login', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await expect(page.getByRole('textbox', { name: 'you@company.com' })).toBeVisible({ timeout: 15000 });
-  await page.getByRole('textbox', { name: 'you@company.com' }).fill('yohann.shroff@bloo.io');
-  await page.getByRole('button', { name: 'Continue with Password' }).click();
-  await page.getByRole('textbox', { name: '••••••••' }).fill('Doctorwho@6c');
-  await page.getByRole('button', { name: 'Sign In' }).click();
-  await page.waitForLoadState('networkidle');
-
-  // Navigate to Dashboards
-  await page.getByRole('button', { name: 'SIEM' }).click();
-  await page.getByRole('link', { name: 'Dashboards' }).click();
-  await page.waitForLoadState('networkidle');
+  await login(page);
+  await gotoDashboards(page);
 
   // Search
   await page.locator('button[aria-label="Open search"]').click();
@@ -204,23 +132,9 @@ test('dashboard-search-identity', async ({ page }) => {
   await expect(page.getByText('Identity and Access Monitoring')).toBeVisible();
 });
 
-
-
 test('dashboard-search-sme', async ({ page }) => {
-
-  // --- Login ---
-  await page.goto('https://bloo-qa.dnifuat.com/#/auth/login', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await expect(page.getByRole('textbox', { name: 'you@company.com' })).toBeVisible({ timeout: 15000 });
-  await page.getByRole('textbox', { name: 'you@company.com' }).fill('yohann.shroff@bloo.io');
-  await page.getByRole('button', { name: 'Continue with Password' }).click();
-  await page.getByRole('textbox', { name: '••••••••' }).fill('Doctorwho@6c');
-  await page.getByRole('button', { name: 'Sign In' }).click();
-  await page.waitForLoadState('networkidle');
-
-  // Navigate to Dashboards
-  await page.getByRole('button', { name: 'SIEM' }).click();
-  await page.getByRole('link', { name: 'Dashboards' }).click();
-  await page.waitForLoadState('networkidle');
+  await login(page);
+  await gotoDashboards(page);
 
   // Search
   await page.locator('button[aria-label="Open search"]').click();
@@ -230,19 +144,8 @@ test('dashboard-search-sme', async ({ page }) => {
 });
 
 test('dasboard-type-filter', async ({ page }) => {
-  // --- Login ---
-  await page.goto('https://bloo-qa.dnifuat.com/#/auth/login', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await expect(page.getByRole('textbox', { name: 'you@company.com' })).toBeVisible({ timeout: 15000 });
-  await page.getByRole('textbox', { name: 'you@company.com' }).fill('yohann.shroff@bloo.io');
-  await page.getByRole('button', { name: 'Continue with Password' }).click();
-  await page.getByRole('textbox', { name: '••••••••' }).fill('Doctorwho@6c');
-  await page.getByRole('button', { name: 'Sign In' }).click();
-  await page.waitForLoadState('networkidle');
-
-  // Navigate to Dashboards
-  await page.getByRole('button', { name: 'SIEM' }).click();
-  await page.getByRole('link', { name: 'Dashboards' }).click();
-  await page.waitForLoadState('networkidle');
+  await login(page);
+  await gotoDashboards(page);
 
   // Open Type filter
   await page.getByRole('button', { name: 'Type' }).click();
@@ -252,22 +155,9 @@ test('dasboard-type-filter', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Save Filter' })).toBeVisible();
 });
 
-
 test('dashboard-useraccess-filter', async ({ page }) => {
-
-  // --- Login ---
-  await page.goto('https://bloo-qa.dnifuat.com/#/auth/login', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await expect(page.getByRole('textbox', { name: 'you@company.com' })).toBeVisible({ timeout: 15000 });
-  await page.getByRole('textbox', { name: 'you@company.com' }).fill('yohann.shroff@bloo.io');
-  await page.getByRole('button', { name: 'Continue with Password' }).click();
-  await page.getByRole('textbox', { name: '••••••••' }).fill('Doctorwho@6c');
-  await page.getByRole('button', { name: 'Sign In' }).click();
-  await page.waitForLoadState('networkidle');
-
-  // Navigate to Dashboards
-  await page.getByRole('button', { name: 'SIEM' }).click();
-  await page.getByRole('link', { name: 'Dashboards' }).click();
-  await page.waitForLoadState('networkidle');
+  await login(page);
+  await gotoDashboards(page);
 
   // Open User Access filter
   await page.getByRole('button', { name: 'User Access' }).click();
@@ -278,59 +168,37 @@ test('dashboard-useraccess-filter', async ({ page }) => {
 });
 
 test('dashboard-open-verify', async ({ page }) => {
-  // login steps...
-await page.goto('https://bloo-qa.dnifuat.com/#/auth/login');
-
-  await page
-    .getByRole('textbox', { name: 'you@company.com' })
-    .fill('yohann.shroff@bloo.io');
-
-  await page.getByRole('button', { name: 'Continue with Password' }).click();
-
-  await page
-    .getByRole('textbox', { name: '••••••••' })
-    .fill('Doctorwho@6c');
-
-  await page.getByRole('button', { name: 'Sign In' }).click();
-
-  // Navigate to Dashboards
-  await page.getByRole('button', { name: 'SIEM' }).click();
-  await page.getByRole('link', { name: 'Dashboards' }).click();
+  await login(page);
+  await gotoDashboards(page);
 
   const dashboardName = 'Playwright-Test';
 
   // Find dashboard name in listing
- const dashboard = page.getByRole('button', { name: 'Playwright-Test' });
+  const dashboard = page.getByRole('button', { name: 'Playwright-Test' });
 
-// climb until you find a container that contains the entire row
-const row = dashboard.locator('xpath=ancestor::div[contains(.,"Public") or contains(.,"Private")][1]');
+  // climb until you find a container that contains the entire row
+  const row = dashboard.locator('xpath=ancestor::div[contains(.,"Public") or contains(.,"Private")][1]');
 
-await expect(row).toContainText(/Public|Private/);
-await expect(row).toContainText('Bloo Command');
-// Open Dashboard
-await dashboard.click({timeout: 15000});
+  await expect(row).toContainText(/Public|Private/);
+  await expect(row).toContainText('Bloo Command');
+  // Open Dashboard
+  await dashboard.click({timeout: 15000});
 
-// Verify dashboard opened
-await expect(page).toHaveURL(/dashboard/i);
+  // Verify dashboard opened
+  await expect(page).toHaveURL(/dashboard/i);
 
-// Wait for dashboard to finish loading
-await expect(
-  page.getByText('Loading dashboard...')
-).toBeHidden({timeout: 15000});
+  // Wait for dashboard to finish loading
+  await expect(
+    page.getByText('Loading dashboard...')
+  ).toBeHidden({timeout: 15000});
 });
-
 
 test('dashboard-create', async ({ page }) => {
   test.setTimeout(120000);
 
-  await page.goto('https://bloo-qa.dnifuat.com/#/auth/login');
-  await page.getByRole('textbox', { name: 'you@company.com' }).fill('yohann.shroff@bloo.io');
-  await page.getByRole('textbox', { name: 'you@company.com' }).press('Enter');
-  await page.getByRole('textbox', { name: '••••••••' }).click();
-  await page.getByRole('textbox', { name: '••••••••' }).fill('Doctorwho@6c');
-  await page.getByRole('button', { name: 'Sign In' }).click();
-  await page.getByRole('button', { name: 'SIEM' }).click();
-  await page.getByRole('link', { name: 'Dashboards' }).click({ timeout: 15000 });
+  await login(page);
+  await gotoDashboards(page);
+
   await page.getByRole('button', { name: 'Add Dashboard' }).click();
   await page.getByRole('button', { name: 'Add Widget' }).first().click();
   await page.getByRole('button', { name: 'Top 10 Email Deletion Metrics' }).click({ timeout: 15000 });
@@ -346,14 +214,9 @@ test('dashboard-create', async ({ page }) => {
 test('dashboard-create-delete', async ({ page }) => {
   test.setTimeout(120000);
 
-  await page.goto('https://bloo-qa.dnifuat.com/#/auth/login');
-  await page.getByRole('textbox', { name: 'you@company.com' }).fill('yohann.shroff@bloo.io');
-  await page.getByRole('textbox', { name: 'you@company.com' }).press('Enter');
-  await page.getByRole('textbox', { name: '••••••••' }).click();
-  await page.getByRole('textbox', { name: '••••••••' }).fill('Doctorwho@6c');
-  await page.getByRole('button', { name: 'Sign In' }).click();
-  await page.getByRole('button', { name: 'SIEM' }).click();
-  await page.getByRole('link', { name: 'Dashboards' }).click({ timeout: 10000 });
+  await login(page);
+  await gotoDashboards(page);
+
   await page.getByRole('button', { name: 'Add Dashboard' }).click();
   await page.getByRole('button', { name: 'Add Widget' }).first().click();
   await page.getByRole('button', { name: 'Top 10 Email Deletion Metrics' }).click({ timeout: 15000 });
@@ -364,55 +227,38 @@ test('dashboard-create-delete', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Dashboard name…' }).click();
   await page.getByRole('textbox', { name: 'Dashboard name…' }).fill('PW-Temp-Test');
 
-const widgetCard = page
-  .locator('[class*="chart-card"], [class*="widget"]')
-  .filter({has: page.getByText('Top 10 Email Deletion Metrics', { exact: true })})
-  .first();
+  const widgetCard = page
+    .locator('[class*="chart-card"], [class*="widget"]')
+    .filter({has: page.getByText('Top 10 Email Deletion Metrics', { exact: true })})
+    .first();
 
-await expect(widgetCard).toBeVisible();
+  await expect(widgetCard).toBeVisible();
 
-// Click the last action button in the widget header
-await widgetCard.getByRole('button').last().click();
+  // Click the last action button in the widget header
+  await widgetCard.getByRole('button').last().click();
 
-await page.getByRole('button', { name: 'Save Dashboard' }).click();
-const dashboardName = 'PW-Temp-Test';
+  await page.getByRole('button', { name: 'Save Dashboard' }).click();
+  const dashboardName = 'PW-Temp-Test';
 
-const dashboard = page.getByRole('button', {name: 'PW-Temp-Test'});
+  const dashboard = page.getByRole('button', {name: 'PW-Temp-Test'});
 
-await expect(dashboard).toBeVisible({ timeout: 60000 });
+  await expect(dashboard).toBeVisible({ timeout: 60000 });
 
-// delete directly from dashboard list
-await page.getByRole('button', { name: 'Delete' }).first().click();
-await page.getByRole('button', { name: 'Delete' }).click();
-await page.getByRole('button', { name: 'Delete' }).click();
+  // delete directly from dashboard list
+  await page.getByRole('button', { name: 'Delete' }).first().click();
+  await page.getByRole('button', { name: 'Delete' }).click();
+  await page.getByRole('button', { name: 'Delete' }).click();
 
-await page
-  .getByRole('row', { name: 'Select row SME-TEST Public -' })
-  .getByLabel('Select row')
-  .click();
-await page.getByRole('button', { name: 'Refresh data' }).click();
+  await page
+    .getByRole('row', { name: 'Select row SME-TEST Public -' })
+    .getByLabel('Select row')
+    .click();
+  await page.getByRole('button', { name: 'Refresh data' }).click();
 });
 
-
 test('dashboard-search-and-filter', async ({ page }) => {
-  await page.goto('https://bloo-qa.dnifuat.com/#/auth/login');
-
-  await page
-    .getByRole('textbox', { name: 'you@company.com' })
-    .fill('yohann.shroff@bloo.io');
-
-  await page
-    .getByRole('textbox', { name: 'you@company.com' })
-    .press('Enter');
-
-  await page
-    .getByRole('textbox', { name: '••••••••' })
-    .fill('Doctorwho@6c');
-
-  await page.getByRole('button', { name: 'Sign In' }).click();
-
-  await page.getByRole('button', { name: 'SIEM' }).click();
-  await page.getByRole('link', { name: 'Dashboards' }).click();
+  await login(page);
+  await gotoDashboards(page);
 
   // -----------------------------
   // SEARCH TESTS
@@ -449,8 +295,6 @@ test('dashboard-search-and-filter', async ({ page }) => {
   await page.getByRole('button', { name: 'Clear search' }).click();
 
   await expect(searchBox).toHaveValue('');
-
-//dont edit above this
 
   // Close Search Panel
   await page.locator('.absolute.right-3').click();
@@ -504,10 +348,10 @@ test('dashboard-search-and-filter', async ({ page }) => {
   ).toBeVisible();
 
   // Save Filter
-await page.getByRole('button', { name: 'Save Filter' }).click();
-await expect(
-  page.getByText('Dashboard filters saved successfully')
-).toBeVisible();
+  await page.getByRole('button', { name: 'Save Filter' }).click();
+  await expect(
+    page.getByText('Dashboard filters saved successfully')
+  ).toBeVisible();
   // Reset Again
   await page.getByRole('button', { name: 'Clear all' }).click();
   await page.getByRole('button', { name: 'Save Filter' }).click();

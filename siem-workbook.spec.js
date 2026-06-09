@@ -6,8 +6,8 @@ test.describe.configure({
 
 const BASE_URL = 'https://bloo-qa.dnifuat.com';
 const WORKBOOKS_URL = `${BASE_URL}/#/29321b9e-3572-43ee-924d-1c6cbfc7ftot/default/siem/workbooks`;
-const EMAIL = 'yohann.shroff@bloo.io';
-const PASSWORD = 'Doctorwho@6c';
+const EMAIL = process.env.BLOOTEST_EMAIL;
+const PASSWORD = process.env.BLOOTEST_PASSWORD;
 
 const SEARCH_PLACEHOLDER = 'Search Workbook by Name';
 const FILTERS = {
