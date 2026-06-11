@@ -69,6 +69,7 @@ Tests use environment variables for authentication. Create a `.env` file in the 
 ```env
 BLOOTEST_EMAIL=your-email@bloo.io
 BLOOTEST_PASSWORD=your-password
+URL=bloo-URL
 ```
 
 **Note**: The `.env` file is excluded from version control via `.gitignore`.
