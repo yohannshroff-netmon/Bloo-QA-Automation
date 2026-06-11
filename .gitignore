@@ -5,3 +5,5 @@ test-results/
 .DS_Store
 temp/
 .env
+DNIF-Testing/
+playwright-report/

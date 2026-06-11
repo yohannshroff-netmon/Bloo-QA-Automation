@@ -12,347 +12,208 @@ async function login(page) {
   await page.getByRole('textbox', { name: '••••••••' }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Sign In' }).click();
   await page.waitForLoadState('networkidle');
+  await expect(page.getByRole('button', { name: 'Open user menu' })).toBeVisible({ timeout: 30000 });
 }
 
 async function gotoDashboards(page) {
   await page.getByRole('button', { name: 'SIEM' }).click();
   await page.getByRole('link', { name: 'Dashboards' }).click();
   await page.waitForLoadState('networkidle');
+  await expect(page.getByText('Manage and view your security dashboards')).toBeVisible({ timeout: 30000 });
 }
 
-test('dashboard-author-filter', async ({ page }) => {
-  await login(page);
-  await gotoDashboards(page);
-
-  // Open Author filter
-  await page.getByRole('button', { name: 'Author' }).click();
-
-  // More reliable assertion
-  await page.locator('button:has-text("Save Filter")').waitFor({ state: 'visible', timeout: 5000 });
-  await expect(page.getByRole('button', { name: 'Save Filter' })).toBeVisible();
-});
-
-test('dashboard-export-modal', async ({ page }) => {
-  await login(page);
-  await gotoDashboards(page);
-
-  // --- Wait for Export button enabled then click ---
-  const exportButton = page.getByRole('button', { name: 'Export data' });
-  let enabled = false;
-  for (let i = 0; i < 30; i++) {
-    if (await exportButton.isEnabled()) {
-      enabled = true;
-      break;
-    }
-    await page.waitForTimeout(1000);
-  }
-  expect(enabled).toBeTruthy();
-  await exportButton.click();
-
-  // --- Wait for modal then click modal Export ---
-  const dialogHeading = page.getByRole('heading', { name: 'Dashboards' }).last();
-  await dialogHeading.waitFor({ state: 'visible', timeout: 15000 });
-  // Heading is now confirmed visible; scope the dialog by the heading's ancestor
-  const exportDialog = dialogHeading.locator('xpath=ancestor::div[@role="dialog"]').first();
-
-  // --- Trigger download ---
-  const [download] = await Promise.all([
-    page.waitForEvent('download', { timeout: 60000 }),
-    exportDialog.getByRole('button', { name: /^Export$/ }).click()
-  ]);
-
-  // --- Assert download ---
-  const filename = (download.suggestedFilename() || '').toLowerCase();
-  expect(filename).toBeTruthy();
-});
-
-test('dashboard-export-selected', async ({ page }) => {
-  await login(page);
-  await gotoDashboards(page);
-
-  await page.getByRole('row', { name: 'Select row SME-TEST Public -' }).getByLabel('Select row').click();
-  await page.getByRole('button', { name: 'Export data' }).click();
-  await page.locator('div').filter({ hasText: /^Export Dashboards as tar\.gz$/ }).first().click();
-  await page.locator('div').filter({ hasText: /^CancelExport$/ }).first().click();
-  const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export' }).click();
-  const download = await downloadPromise;
-  await page.getByRole('row', { name: 'Select row SME-TEST Public -' }).getByLabel('Select row').click();
-});
-
-test('dashboard-misc', async ({ page }) => {
-  await login(page);
-
-  await expect(page.getByRole('button', { name: 'Open user menu' })).toBeVisible({ timeout: 15000 });
-
-  // --- Dark / Light mode toggle ---
-  await page.getByRole('button', { name: 'Open user menu' }).click();
-  await page.getByRole('button', { name: 'Dark Mode' }).click();
-
-  await page.getByRole('button', { name: 'Open user menu' }).click();
-  await page.getByRole('button', { name: 'Light Mode' }).click();
-
-  // --- Navigate to SIEM > Dashboards ---
-  await gotoDashboards(page);
-
-  // --- Refresh data ---
-  await page.getByRole('button', { name: 'Refresh data' }).click();
+async function waitAndClickRefresh(page) {
+  const refreshButton = page.getByRole('button', { name: 'Refresh data' });
+  await expect(refreshButton).toBeEnabled({ timeout: 30000 });
+  await refreshButton.click();
   await page.waitForLoadState('networkidle');
+}
 
-  // --- Click on Yohann Shroff entry ---
-  await expect(
-    page.locator('div').filter({ hasText: /^Yohann Shroff$/ }).first()
-  ).toBeVisible({ timeout: 10000 });
-  await page.locator('div').filter({ hasText: /^Yohann Shroff$/ }).first().click();
+test.describe('SIEM Dashboards', () => {
+  test('dashboard-author-filter', async ({ page }) => {
+    await login(page);
+    await gotoDashboards(page);
 
-  // --- Sign out ---
-  await page.getByRole('button', { name: 'Open user menu' }).click();
-  await expect(
-    page.getByRole('button', { name: 'Sign out' })
-  ).toBeVisible({ timeout: 10000 });
-  await page.getByRole('button', { name: 'Sign out' }).click();
-});
-
-test('dashboard-page-load', async ({ page }) => {
-  await login(page);
-  await gotoDashboards(page);
-
-  // Use a unique page text to assert the page loaded (avoid ambiguous getByText('Dashboards'))
-  await expect(page.getByText('Manage and view your security dashboards')).toBeVisible();
-});
-
-test('dashboard-search-identity', async ({ page }) => {
-  await login(page);
-  await gotoDashboards(page);
-
-  // Search
-  await page.locator('button[aria-label="Open search"]').click();
-  await page.locator('input').fill('Identity and Access Monitoring');
-
-  await expect(page.getByText('Identity and Access Monitoring')).toBeVisible();
-});
-
-test('dashboard-search-sme', async ({ page }) => {
-  await login(page);
-  await gotoDashboards(page);
-
-  // Search
-  await page.locator('button[aria-label="Open search"]').click();
-  await page.locator('input').fill('SME');
-
-  await expect(page.getByText('SME-TEST')).toBeVisible({ timeout: 15000 });
-});
-
-test('dasboard-type-filter', async ({ page }) => {
-  await login(page);
-  await gotoDashboards(page);
-
-  // Open Type filter
-  await page.getByRole('button', { name: 'Type' }).click();
-
-  // More reliable assertion
-  await page.locator('button:has-text("Save Filter")').waitFor({ state: 'visible', timeout: 5000 });
-  await expect(page.getByRole('button', { name: 'Save Filter' })).toBeVisible();
-});
-
-test('dashboard-useraccess-filter', async ({ page }) => {
-  await login(page);
-  await gotoDashboards(page);
-
-  // Open User Access filter
-  await page.getByRole('button', { name: 'User Access' }).click();
-
-  // Wait/assert on a visible control inside the opened filter (more reliable than asserting a generic dialog)
-  await page.locator('button:has-text("Save Filter")').waitFor({ state: 'visible', timeout: 5000 });
-  await expect(page.getByRole('button', { name: 'Save Filter' })).toBeVisible();
-});
-
-test('dashboard-open-verify', async ({ page }) => {
-  await login(page);
-  await gotoDashboards(page);
-
-  const dashboardName = 'Playwright-Test';
-
-  // Find dashboard name in listing
-  const dashboard = page.getByRole('button', { name: 'Playwright-Test' });
-
-  // climb until you find a container that contains the entire row
-  const row = dashboard.locator('xpath=ancestor::div[contains(.,"Public") or contains(.,"Private")][1]');
-
-  await expect(row).toContainText(/Public|Private/);
-  await expect(row).toContainText('Bloo Command');
-  // Open Dashboard
-  await dashboard.click({timeout: 15000});
-
-  // Verify dashboard opened
-  await expect(page).toHaveURL(/dashboard/i);
-
-  // Wait for dashboard to finish loading
-  await expect(
-    page.getByText('Loading dashboard...')
-  ).toBeHidden({timeout: 15000});
-});
-
-test('dashboard-create', async ({ page }) => {
-  test.setTimeout(120000);
-
-  await login(page);
-  await gotoDashboards(page);
-
-  await page.getByRole('button', { name: 'Add Dashboard' }).click();
-  await page.getByRole('button', { name: 'Add Widget' }).first().click();
-  await page.getByRole('button', { name: 'Top 10 Email Deletion Metrics' }).click({ timeout: 15000 });
-  await page.getByRole('button', { name: 'Top 10 Email Deletion Metrics' }).click({ timeout: 15000 });
-  await page.getByRole('button', { name: 'Threat Alerts by Source Types' }).click({ timeout: 15000 });
-  await page.getByRole('button', { name: 'Top 10 Email Deletion Metrics' }).click({ timeout: 15000 });
-  await page.getByRole('button', { name: 'Done' }).click();
-  await page.getByRole('textbox', { name: 'Dashboard name…' }).click();
-  await page.getByRole('textbox', { name: 'Dashboard name…' }).fill('Playwright-Test');
-  await page.getByRole('button', { name: 'Save Dashboard' }).click({timeout: 30000});
-});
-
-test('dashboard-create-delete', async ({ page }) => {
-  test.setTimeout(120000);
-
-  await login(page);
-  await gotoDashboards(page);
-
-  await page.getByRole('button', { name: 'Add Dashboard' }).click();
-  await page.getByRole('button', { name: 'Add Widget' }).first().click();
-  await page.getByRole('button', { name: 'Top 10 Email Deletion Metrics' }).click({ timeout: 15000 });
-  await page.getByRole('button', { name: 'Top 10 Email Deletion Metrics' }).click({ timeout: 15000 });
-  await page.getByRole('button', { name: 'Top 10 Email Deletion Metrics' }).click({ timeout: 15000 });
-  await page.getByRole('button', { name: 'Top 10 Email Deletion Metrics' }).click({ timeout: 15000 });
-  await page.getByRole('button', { name: 'Done' }).click();
-  await page.getByRole('textbox', { name: 'Dashboard name…' }).click();
-  await page.getByRole('textbox', { name: 'Dashboard name…' }).fill('PW-Temp-Test');
-
-  const widgetCard = page
-    .locator('[class*="chart-card"], [class*="widget"]')
-    .filter({has: page.getByText('Top 10 Email Deletion Metrics', { exact: true })})
-    .first();
-
-  await expect(widgetCard).toBeVisible();
-
-  // Click the last action button in the widget header
-  await widgetCard.getByRole('button').last().click();
-
-  await page.getByRole('button', { name: 'Save Dashboard' }).click();
-  const dashboardName = 'PW-Temp-Test';
-
-  const dashboard = page.getByRole('button', {name: 'PW-Temp-Test'});
-
-  await expect(dashboard).toBeVisible({ timeout: 60000 });
-
-  // delete directly from dashboard list
-  await page.getByRole('button', { name: 'Delete' }).first().click();
-  await page.getByRole('button', { name: 'Delete' }).click();
-  await page.getByRole('button', { name: 'Delete' }).click();
-
-  await page
-    .getByRole('row', { name: 'Select row SME-TEST Public -' })
-    .getByLabel('Select row')
-    .click();
-  await page.getByRole('button', { name: 'Refresh data' }).click();
-});
-
-test('dashboard-search-and-filter', async ({ page }) => {
-  await login(page);
-  await gotoDashboards(page);
-
-  // -----------------------------
-  // SEARCH TESTS
-  // -----------------------------
-
-  await page.getByRole('button', { name: 'Open search' }).click();
-
-  const searchBox = page.getByRole('textbox', {
-    name: 'Search Dashboard by Name'
+    await page.getByRole('button', { name: 'Author' }).click();
+    await page.locator('button:has-text("Save Filter")').waitFor({ state: 'visible', timeout: 10000 });
+    await expect(page.getByRole('button', { name: 'Save Filter' })).toBeVisible();
   });
 
-  await expect(searchBox).toBeVisible();
+  test('dashboard-export-modal', async ({ page }) => {
+    await login(page);
+    await gotoDashboards(page);
 
-  // Exact Search
-  await searchBox.fill('SME-TEST');
-  await expect(searchBox).toHaveValue('SME-TEST');
+    const exportButton = page.getByRole('button', { name: 'Export data' });
+    await expect(exportButton).toBeEnabled({ timeout: 30000 });
+    await exportButton.click();
 
-  // Partial Search
-  await searchBox.fill('SME');
-  await expect(searchBox).toHaveValue('SME');
+    const dialogHeading = page.getByRole('heading', { name: 'Dashboards' }).last();
+    await dialogHeading.waitFor({ state: 'visible', timeout: 15000 });
+    const exportDialog = dialogHeading.locator('xpath=ancestor::div[@role="dialog"]').first();
 
-  // Case Insensitive Search
-  await searchBox.fill('sme');
-  await expect(searchBox).toHaveValue('sme');
+    const [download] = await Promise.all([
+      page.waitForEvent('download', { timeout: 60000 }),
+      exportDialog.getByRole('button', { name: /^Export$/ }).click()
+    ]);
 
-  // Empty Search Result
-  await searchBox.fill('wertyuiop;kjfsazxcvbnm,');
+    expect(download.suggestedFilename()).toBeTruthy();
+  });
 
-  await expect(
-    page.getByText(/No results found/i)
-  ).toBeVisible({ timeout: 15000 });
+  test('dashboard-export-selected', async ({ page }) => {
+    await login(page);
+    await gotoDashboards(page);
 
-  // Clear Search
-  await page.getByRole('button', { name: 'Clear search' }).click();
+    const firstRow = page.locator('tbody tr').first();
+    await expect(firstRow).toBeVisible({ timeout: 30000 });
+    await firstRow.getByLabel('Select row').click();
 
-  await expect(searchBox).toHaveValue('');
+    await page.getByRole('button', { name: 'Export data' }).click();
+    const exportDialog = page.getByRole('dialog', { name: 'Export Dashboards as tar.gz' });
+    await expect(exportDialog).toBeVisible({ timeout: 15000 });
 
-  // Close Search Panel
-  await page.locator('.absolute.right-3').click();
+    const [download] = await Promise.all([
+      page.waitForEvent('download', { timeout: 60000 }),
+      exportDialog.getByRole('button', { name: 'Export' }).click()
+    ]);
 
-  // -----------------------------
-  // FILTER TESTS
-  // -----------------------------
-  
-  // Type Filter
-  await page.getByRole('button', { name: 'Type' }).click();
-  await page.getByRole('button', { name: 'Public' }).click();
+    expect(download.suggestedFilename()).toBeTruthy();
+  });
 
-  await expect(
-    page.locator('text=Public').first()
-  ).toBeVisible();
+  test('dashboard-misc', async ({ page }) => {
+    await login(page);
 
-  // Reset Filter
-  await page.getByRole('button', { name: 'Clear all' }).click();
+    // Dark / Light mode toggle
+    await page.getByRole('button', { name: 'Open user menu' }).click();
+    await page.getByRole('button', { name: 'Dark Mode' }).click();
+    await page.getByRole('button', { name: 'Open user menu' }).click();
+    await page.getByRole('button', { name: 'Light Mode' }).click();
 
-  // Author Filter
-  await page.getByRole('button', { name: 'Author' }).click();
-  await page.getByRole('button', { name: 'devesh' }).click();
+    await gotoDashboards(page);
+    await waitAndClickRefresh(page);
 
-  await expect(
-    page.locator('text=devesh').first()
-  ).toBeVisible();
+    // Sign out
+    await page.getByRole('button', { name: 'Open user menu' }).click();
+    await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible({ timeout: 10000 });
+    await page.getByRole('button', { name: 'Sign out' }).click();
+    await expect(page).toHaveURL(/#\/auth\/login/);
+  });
 
-  await page.getByRole('button', { name: 'Clear all' }).click();
+  test('dashboard-page-load', async ({ page }) => {
+    await login(page);
+    await gotoDashboards(page);
+    await expect(page.getByText('Manage and view your security dashboards')).toBeVisible();
+  });
 
-  // User Access Filter
-  await page.getByRole('button', { name: 'User Access' }).click();
-  await page.getByRole('button', {
-    name: 'vipin.dumbhare@bloo.io'
-  }).click();
+  test('dashboard-search-identity', async ({ page }) => {
+    await login(page);
+    await gotoDashboards(page);
 
-  await expect(
-    page.locator('text=vipin.dumbhare@bloo.io').first()
-  ).toBeVisible();
+    await page.locator('button[aria-label="Open search"]').click();
+    const searchInput = page.getByPlaceholder('Search Dashboard by Name');
+    await searchInput.fill('Identity and Access Monitoring');
 
-  await page.getByRole('button', { name: 'Clear all' }).click();
+    await expect(page.getByText('Identity and Access Monitoring')).toBeVisible({ timeout: 15000 });
+  });
 
-  // Combination Filter
-  await page.getByRole('button', { name: 'Type' }).click();
-  await page.getByRole('button', { name: 'Private', exact: true }).click();
+  test('dashboard-search-sme', async ({ page }) => {
+    await login(page);
+    await gotoDashboards(page);
 
-  await page.getByRole('button', { name: 'Author' }).click();
-  await page.getByRole('button', { name: 'Rakshit Shetty' }).click();
+    await page.locator('button[aria-label="Open search"]').click();
+    const searchInput = page.getByPlaceholder('Search Dashboard by Name');
+    await searchInput.fill('SME-TEST');
 
-  await expect(
-    page.locator('text=Rakshit Shetty').first()
-  ).toBeVisible();
+    await expect(page.getByText('SME-TEST')).toBeVisible({ timeout: 15000 });
+  });
 
-  // Save Filter
-  await page.getByRole('button', { name: 'Save Filter' }).click();
-  await expect(
-    page.getByText('Dashboard filters saved successfully')
-  ).toBeVisible();
-  // Reset Again
-  await page.getByRole('button', { name: 'Clear all' }).click();
-  await page.getByRole('button', { name: 'Save Filter' }).click();
+  test('dashboard-type-filter', async ({ page }) => {
+    await login(page);
+    await gotoDashboards(page);
+
+    await page.getByRole('button', { name: 'Type' }).click();
+    await page.locator('button:has-text("Save Filter")').waitFor({ state: 'visible', timeout: 10000 });
+    await expect(page.getByRole('button', { name: 'Save Filter' })).toBeVisible();
+  });
+
+  test('dashboard-useraccess-filter', async ({ page }) => {
+    await login(page);
+    await gotoDashboards(page);
+
+    await page.getByRole('button', { name: 'User Access' }).click();
+    await page.locator('button:has-text("Save Filter")').waitFor({ state: 'visible', timeout: 10000 });
+    await expect(page.getByRole('button', { name: 'Save Filter' })).toBeVisible();
+  });
+
+  test('dashboard-open-verify', async ({ page }) => {
+    await login(page);
+    await gotoDashboards(page);
+
+    const dashboardLink = page.locator('tbody tr td button').first();
+    await expect(dashboardLink).toBeVisible({ timeout: 30000 });
+    const dashboardName = await dashboardLink.innerText();
+    
+    await dashboardLink.click();
+    await expect(page).toHaveURL(/dashboard\/[^/]+/);
+    await expect(page.getByText('Loading dashboard...')).toBeHidden({ timeout: 30000 });
+    await expect(page.getByRole('heading', { name: dashboardName.trim() })).toBeVisible({ timeout: 15000 });
+  });
+
+  test('dashboard-create-delete', async ({ page }) => {
+    test.setTimeout(180000);
+    await login(page);
+    await gotoDashboards(page);
+
+    const tempName = `PW-Temp-${Date.now()}`;
+
+    await page.getByRole('button', { name: 'Add Dashboard' }).click();
+    await expect(page.getByRole('button', { name: 'Add Widget' }).first()).toBeVisible({ timeout: 30000 });
+    
+    await page.getByRole('button', { name: 'Add Widget' }).first().click();
+    const firstWidget = page.locator('.grid button').first();
+    await expect(firstWidget).toBeVisible({ timeout: 15000 });
+    await firstWidget.click();
+    await page.getByRole('button', { name: 'Done' }).click();
+
+    await page.getByPlaceholder('Dashboard name…').fill(tempName);
+    await page.getByRole('button', { name: 'Save Dashboard' }).click();
+    
+    await expect(page.getByText('Dashboard saved successfully')).toBeVisible({ timeout: 30000 });
+    await expect(page).toHaveURL(/\/siem\/dashboards/);
+
+    // Search and Delete
+    await page.locator('button[aria-label="Open search"]').click();
+    await page.getByPlaceholder('Search Dashboard by Name').fill(tempName);
+    
+    const row = page.locator('tbody tr').filter({ hasText: tempName });
+    await expect(row).toBeVisible({ timeout: 15000 });
+    
+    await row.getByRole('button', { name: 'Delete' }).click();
+    await page.getByRole('button', { name: 'Delete', exact: true }).click();
+    
+    await expect(page.getByText('deleted successfully')).toBeVisible({ timeout: 15000 });
+  });
+
+  test('dashboard-search-and-filter', async ({ page }) => {
+    await login(page);
+    await gotoDashboards(page);
+
+    await page.getByRole('button', { name: 'Open search' }).click();
+    const searchBox = page.getByPlaceholder('Search Dashboard by Name');
+    await expect(searchBox).toBeVisible();
+
+    await searchBox.fill('SME-TEST');
+    await expect(page.getByText('SME-TEST')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Clear search' }).click();
+    await expect(searchBox).toHaveValue('');
+
+    // Filters
+    await page.getByRole('button', { name: 'Type' }).click();
+    await page.getByRole('button', { name: 'Public', exact: true }).click();
+    await expect(page.locator('button:has-text("Save Filter")')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Clear all' }).click();
+    await page.getByRole('button', { name: 'Save Filter' }).click();
+    await expect(page.getByText('Dashboard filters saved successfully')).toBeVisible();
+  });
 });

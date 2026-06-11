@@ -5,7 +5,6 @@ test.describe.configure({
 });
 
 const BASE_URL = 'https://bloo-qa.dnifuat.com';
-const WORKBOOKS_URL = `${BASE_URL}/#/29321b9e-3572-43ee-924d-1c6cbfc7ftot/default/siem/workbooks`;
 const EMAIL = process.env.BLOOTEST_EMAIL;
 const PASSWORD = process.env.BLOOTEST_PASSWORD;
 
@@ -43,10 +42,9 @@ async function login(page) {
 }
 
 async function gotoWorkbooks(page) {
-  await page.goto(WORKBOOKS_URL, {
-    waitUntil: 'domcontentloaded',
-    timeout: 60000,
-  });
+  await page.getByRole('button', { name: 'SIEM' }).click();
+  await page.getByRole('link', { name: 'Workbooks' }).click();
+
   await expect(page.getByText('Create and manage your Workbooks')).toBeVisible({
     timeout: 30000,
   });
@@ -82,7 +80,23 @@ async function openFilterChip(page, label) {
 
 async function selectFilterOption(page, label, option) {
   await openFilterChip(page, label);
-  await page.getByRole('option', { name: option, exact: true }).click();
+  // Single-select filters in DataTable use buttons
+  const optionButton = page.getByRole('button', { name: option, exact: true });
+  await expect(optionButton).toBeVisible({ timeout: 10000 });
+  await optionButton.click();
+  await page.waitForLoadState('networkidle').catch(() => {});
+}
+
+async function selectMultiFilterOptions(page, label, options) {
+  await openFilterChip(page, label);
+  for (const option of options) {
+    // Multi-select filters use checkboxes and labels
+    const checkbox = page.getByLabel(option, { exact: true });
+    if (!(await checkbox.isChecked())) {
+      await checkbox.check();
+    }
+  }
+  await page.getByRole('button', { name: 'Apply', exact: true }).click();
   await page.waitForLoadState('networkidle').catch(() => {});
 }
 
@@ -223,38 +237,58 @@ test.describe('SIEM Workbooks', () => {
     await expect(page.getByRole('button', { name: FILTERS.tags, exact: true })).toBeVisible();
 
     await openFilterChip(page, FILTERS.stage);
-    await expect(page.getByRole('option', { name: 'PROD', exact: true })).toBeVisible();
-    await expect(page.getByRole('option', { name: 'BETA', exact: true })).toBeVisible();
-    await expect(page.getByRole('option', { name: 'DEV', exact: true })).toBeVisible();
-    await expect(page.getByRole('option', { name: 'TEST', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Prod', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Beta', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Dev', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Test', exact: true })).toBeVisible();
     await page.keyboard.press('Escape');
 
     if (await page.getByRole('button', { name: FILTERS.severity, exact: true }).isVisible()) {
       await openFilterChip(page, FILTERS.severity);
-      await expect(page.getByRole('option', { name: 'Low', exact: true })).toBeVisible();
-      await expect(page.getByRole('option', { name: 'Medium', exact: true })).toBeVisible();
-      await expect(page.getByRole('option', { name: 'High', exact: true })).toBeVisible();
-      await expect(page.getByRole('option', { name: 'Critical', exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Low', exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Medium', exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'High', exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Critical', exact: true })).toBeVisible();
       await page.keyboard.press('Escape');
     }
 
     if (await page.getByRole('button', { name: FILTERS.score, exact: true }).isVisible()) {
       await openFilterChip(page, FILTERS.score);
       for (const score of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']) {
-        await expect(page.getByRole('option', { name: score, exact: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: score, exact: true })).toBeVisible();
       }
       await page.keyboard.press('Escape');
     }
 
     await openFilterChip(page, FILTERS.enabled);
-    await expect(page.getByRole('option', { name: 'Enabled', exact: true })).toBeVisible();
-    await expect(page.getByRole('option', { name: 'Disabled', exact: true })).toBeVisible();
-    await page.keyboard.press('Escape');
+
+const enabledPanel = page.locator('[id*="popover-panel"]').last();
+
+await expect(
+  enabledPanel.getByRole('button', { name: 'Enabled', exact: true })
+).toBeVisible();
+
+await expect(
+  enabledPanel.getByRole('button', { name: 'Disabled', exact: true })
+).toBeVisible();
+
+await page.keyboard.press('Escape');
 
     await openFilterChip(page, FILTERS.scheduled);
-    await expect(page.getByRole('option', { name: 'Off', exact: true })).toBeVisible();
-    await expect(page.getByRole('option', { name: 'Scheduled', exact: true })).toBeVisible();
-    await expect(page.getByRole('option', { name: 'Streamed', exact: true })).toBeVisible();
+
+const scheduledPanel = page.locator('[id*="popover-panel"]').last();
+
+await expect(
+  scheduledPanel.getByRole('button', { name: 'Off', exact: true })
+).toBeVisible();
+
+await expect(
+  scheduledPanel.getByRole('button', { name: 'Scheduled', exact: true })
+).toBeVisible();
+
+await expect(
+  scheduledPanel.getByRole('button', { name: 'Streamed', exact: true })
+).toBeVisible();
   });
 
   test('workbooks-filter-apply-clear-and-save', async ({ page }) => {
@@ -286,37 +320,39 @@ test.describe('SIEM Workbooks', () => {
     await loginAndGotoWorkbooks(page);
 
     await openFilterChip(page, FILTERS.stream);
-    const streamOptions = page.getByRole('option');
-    const streamCount = await streamOptions.count();
-    if (streamCount === 0) {
-      test.skip(true, 'No stream options returned by the QA environment.');
+    const options = page.locator('label').filter({ has: page.locator('input[type="checkbox"]') });
+    const count = await options.count();
+    if (count === 0) {
+      test.skip(true, 'No options returned by the QA environment.');
     }
 
-    await streamOptions.first().click();
-    if (streamCount > 1) {
-      await streamOptions.nth(1).click();
+    await options.first().click();
+    if (count > 1) {
+      await options.nth(1).click();
     }
-    await page.locator('body').click({ position: { x: 10, y: 10 } });
+    await page.getByRole('button', { name: 'Apply', exact: true }).click();
     await expect(page.getByText(/^Stream:/)).toBeVisible({ timeout: 15000 });
 
     await page.getByRole('button', { name: 'Clear all' }).click();
 
     await openFilterChip(page, FILTERS.tags);
-    const tagOptions = page.getByRole('option');
+    const tagOptions = page.locator('label').filter({ has: page.locator('input[type="checkbox"]') });
     const tagCount = await tagOptions.count();
     if (tagCount === 0) {
       test.skip(true, 'No tag options returned by the QA environment.');
     }
 
     await tagOptions.first().click();
-    await page.locator('body').click({ position: { x: 10, y: 10 } });
+    await page.getByRole('button', { name: 'Apply', exact: true }).click();
     await expect(page.getByText(/^Tags:/)).toBeVisible({ timeout: 15000 });
   });
 
   test('workbooks-refresh-import-and-export-modal', async ({ page }) => {
     await loginAndGotoWorkbooks(page);
 
-    await page.getByRole('button', { name: 'Refresh data' }).click();
+    const refreshButton = page.getByRole('button', { name: 'Refresh data' });
+    await expect(refreshButton).toBeEnabled({ timeout: 30000 });
+    await refreshButton.click();
     await waitForWorkbookTable(page);
 
     await page.getByRole('button', { name: 'Upload file' }).click();
