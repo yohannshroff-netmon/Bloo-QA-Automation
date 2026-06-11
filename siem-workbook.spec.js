@@ -4,7 +4,7 @@ test.describe.configure({
   timeout: 120000,
 });
 
-const BASE_URL = 'https://bloo-qa.dnifuat.com';
+const BASE_URL = process.env.URL;
 const EMAIL = process.env.BLOOTEST_EMAIL;
 const PASSWORD = process.env.BLOOTEST_PASSWORD;
 

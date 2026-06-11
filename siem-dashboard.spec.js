@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 const EMAIL = process.env.BLOOTEST_EMAIL;
 const PASSWORD = process.env.BLOOTEST_PASSWORD;
-const BASE_URL = 'https://bloo-qa.dnifuat.com';
+const BASE_URL = process.env.URL;
 
 async function login(page) {
   await page.goto(`${BASE_URL}/#/auth/login`, { waitUntil: 'domcontentloaded', timeout: 60000 });
