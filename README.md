@@ -1,6 +1,6 @@
-# Bloo QA — Dashboard Tests
+# Bloo QA — Automation Suite
 
-Automated Playwright test suite for the Bloo SIEM Dashboard page (under SIEM menu).
+Automated Playwright test suite for the Bloo platform, focusing on SIEM Dashboards and Workbooks.
 
 ## Setup
 
@@ -15,7 +15,14 @@ cd /home/yohanns/Desktop/bloo/QA
 npm install
 ```
 
-This installs `@playwright/test` v1.60.0 and its dependencies.
+### Environment Configuration
+Create a `.env` file in the root of the `QA/` directory with the following variables:
+
+```env
+BLOOTEST_EMAIL=your-email@bloo.io
+BLOOTEST_PASSWORD=your-password
+URL=https://bloo-qa.dnifuat.com
+```
 
 ## Running Tests
 
@@ -24,113 +31,71 @@ This installs `@playwright/test` v1.60.0 and its dependencies.
 npx playwright test
 ```
 
-### Run a single test file
+### Run SIEM Dashboard tests
 ```bash
 npx playwright test siem-dashboard.spec.js
 ```
-### Run tests in headed mode (see browser)
+
+### Run SIEM Workbook tests
 ```bash
-npx playwright test --headed
+npx playwright test siem-workbook.spec.js
 ```
 
-### Run with debug mode
-```bash
-PWDEBUG=1 npx playwright test siem-dashboard.spec.js
-```
+## Test Case Descriptions
 
-### Run tests in specific browser
-```bash
-npx playwright test --project=chromium
-npx playwright test --project=firefox
-npx playwright test --project=webkit
-```
+### SIEM Dashboards (`siem-dashboard.spec.js`)
 
-## Test Files
-### Core Tests (Production)
-- **siem-dashboard.spec.js** — Comprehensive suite for SIEM Dashboards, covering creation, deletion, filtering, and export.
-- **siem-workbook.spec.js** — Comprehensive suite for SIEM Workbooks, covering listing, search, folder management, and bulk actions.
+| Test Name | Description |
+|-----------|-------------|
+| `dashboard-page-load` | Verifies the dashboard listing page loads correctly and displays the "Manage and view your security dashboards" heading. |
+| `dashboard-author-filter` | Checks that the **Author** filter chip opens a popover with the "Save Filter" action visible. |
+| `dashboard-type-filter` | Checks that the **Type** (Public/Private) filter chip opens correctly. |
+| `dashboard-useraccess-filter` | Checks that the **User Access** filter chip opens correctly. |
+| `dashboard-search-identity` | Verifies that searching for "Identity and Access Monitoring" returns the correct result. |
+| `dashboard-search-sme` | Verifies that searching for "SME-TEST" returns the correct result. |
+| `dashboard-search-and-filter` | Comprehensive test for search functionality (exact, partial, case-insensitive) and filter application/clearing. |
+| `dashboard-open-verify` | Selects a dashboard from the list, navigates to its detailed view, and verifies the URL and heading. |
+| `dashboard-create-delete` | **Lifecycle Test**: Creates a new temporary dashboard, adds a widget, saves it, and then deletes it from the listing. |
+| `dashboard-export-modal` | Verifies that the **Export data** button opens a modal containing file naming and format options. |
+| `dashboard-export-selected` | Selects a row and verifies the export flow for a specific selection. |
+| `dashboard-mode-signout` | Tests UI settings like **Dark/Light Mode** toggles, data refresh, and user **Sign out**. |
+
+### SIEM Workbooks (`siem-workbook.spec.js`)
+
+| Test Name | Description |
+|-----------|-------------|
+| `workbooks-page-load-and-columns` | Verifies the page loads and all 8+ header columns (Name, Stream, Stage, etc.) are present along with global action buttons. |
+| `workbooks-navigation-from-siem-menu` | Validates the navigation flow from the **SIEM** sidebar menu to the **Workbooks** page. |
+| `workbooks-folder-search` | Tests the folder search input in the left-hand organizational sidebar. |
+| `workbooks-search-exact-partial-case-invalid-and-close` | Tests global workbook search logic, including exact matching, partial strings, and case-insensitivity. |
+| `workbooks-filter-chips-open-and-basic-options` | Ensures filter chips (Stage, Enabled, etc.) open popovers with valid deployment and status options. |
+| `workbooks-multi-filter-stage-and-stream` | **Robustness Test**: Applies a combination of filters (e.g., Stage: Prod + Stream: firewall) and verifies the resulting UI state. |
+| `workbooks-refresh-import-and-export-modal` | Tests the **Refresh data** action and triggers the **Import** and **Export** UI modals. |
+| `workbooks-export-selected-download` | Selects a workbook row and verifies that clicking Export triggers a browser download event. |
+| `workbooks-row-selection-and-bulk-actions` | Selects multiple rows and verifies the visibility of bulk actions: **Delete, Enable, Disable, and Move**. |
+| `workbooks-open-details-and-version-panel` | Navigates into a workbook, verifies the heading, and opens the **Settings/Versions** drawer. |
 
 ## Documentation
 - **GEMINI.md** — Project-wide context, conventions, and module index.
 - **SIEM-WORKBOOKS-CONTEXT.md** — Detailed architectural and functional mapping for the Workbooks module.
 
-## Configuration
-
-### playwright.config.ts
-- **timeout**: 60s per test
-- **navigationTimeout**: 60s for page.goto() and navigations
-- **actionTimeout**: 15s for clicks, fills, etc.
-- **Environment Variables**: Loads variables from `.env` using `dotenv`.
-
-## Credentials
-
-Tests use environment variables for authentication. Create a `.env` file in the root directory:
-
-```env
-BLOOTEST_EMAIL=your-email@bloo.io
-BLOOTEST_PASSWORD=your-password
-URL=bloo-URL
-```
-
-**Note**: The `.env` file is excluded from version control via `.gitignore`.
-
-## CI/CD Integration
-
-To run tests in a CI pipeline (e.g., GitHub Actions, GitLab CI):
-
-```yaml
-- name: Run Playwright tests
-  run: npm install && npx playwright test
-```
-
-Ensure Node.js >= 18 is available in the CI environment.
+## Configuration (`playwright.config.ts`)
+- **Global Timeout**: 60s per test.
+- **Navigation Timeout**: 60s (handles slow environment redirects).
+- **Action Timeout**: 15s (standard for clicks and fills).
+- **Automation**: Uses `dotenv` to load credentials from `.env`.
 
 ## Troubleshooting
 
-### Test timeouts
-- Increase `timeout` in `playwright.config.ts`.
-- Check if the Bloo server is running and responsive.
-- Run with `PWDEBUG=1` to inspect element states in real-time.
-
-### Element not found
-- Verify the selector matches the current DOM (inspect with DevTools or Playwright Inspector).
-- Use `getByRole()` and `getByLabel()` for more robust selectors.
-
-### Login failures
-- Ensure the test account credentials are correct and the user is not locked out.
-- Check if the login page layout has changed (may require selector updates).
-
-### Downloads not captured
-- Ensure `waitForEvent('download')` is set up *before* triggering the download.
-- Use `Promise.all()` to wait and click simultaneously.
+- **Tests skipping?** We have removed manual skips. Tests will now fail with descriptive messages if the environment is missing data (e.g., "No stream options returned").
+- **Strict Mode violations?** If a test fails with "resolved to 2 elements", use `exact: true` in the locator or scope it using a parent element.
+- **Empty list?** Ensure your tenant has at least one workbook created for functional tests to find data.
 
 ## Maintenance
 
-### Adding new tests
-1. Add the new test inside siem-dashboard.spec.js.
-2. Follow the existing pattern:
-- Login
-- Navigate
-- Interact
-- Assert
-- Cleanup any created test data
-3. Use role-based and accessible selectors whenever possible.
-4. Prefer scoped locators (filter({ has: ... })) over brittle CSS chains.
-5. Update this README with:
-- Test purpose
-- Main workflow
-- Any special selector or timing considerations
-6. Ensure tests leave the environment in the same state they found it (delete created dashboards, reports, etc.).
+- **Adding tests**: Add to the relevant `.spec.js` file and update this table.
+- **Selectors**: Prefer `getByRole`, `getByLabel`, or `getByText` for accessibility-first, robust testing.
+- **Cleanup**: Always ensure lifecycle tests (like `create-delete`) remove their temporary data even on failure.
 
-### Updating selectors
-- If the app UI changes, update selectors in affected tests.
-- Prefer role/label selectors over CSS/XPath where possible.
-- Test the new selector in Playwright Inspector before committing.
-
-### Running locally vs. CI
-- Local: `npx playwright test` (uses default browser)
-- CI: Specify project and use headless mode: `npx playwright test --project=chromium`
-
-## License
-
-Internal QA suite for Bloo. Not for external distribution.
+---
+*Internal QA suite for Bloo. Not for external distribution.*

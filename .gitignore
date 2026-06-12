@@ -6,7 +6,6 @@ test-results/
 temp/
 .env
 DNIF-Testing/
-playwright-report/
 GEMINI.md
 SIEM-WORKBOOKS-CONTEXT.md
-
+/home/yohanns/Desktop/bloo/QA/playwright-report

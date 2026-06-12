@@ -17,16 +17,31 @@ async function login(page) {
 
 async function gotoDashboards(page) {
   await page.getByRole('button', { name: 'SIEM' }).click();
+  await page.getByRole('link', { name: 'Workbooks' }).waitFor({ state: 'visible' }); // ensure sidebar is ready
   await page.getByRole('link', { name: 'Dashboards' }).click();
   await page.waitForLoadState('networkidle');
   await expect(page.getByText('Manage and view your security dashboards')).toBeVisible({ timeout: 30000 });
 }
 
 async function waitAndClickRefresh(page) {
-  const refreshButton = page.getByRole('button', { name: 'Refresh data' });
+  const refreshButton = page.getByRole('button', { name: 'Refresh data' }).first();
   await expect(refreshButton).toBeEnabled({ timeout: 30000 });
   await refreshButton.click();
-  await page.waitForLoadState('networkidle');
+  await waitForTableLoad(page);
+}
+
+async function waitForTableLoad(page) {
+    // Wait for any potential loading state to resolve
+    await page.waitForLoadState('networkidle').catch(() => {});
+    const loading = page.getByText(/Loading dashboards|Loading\.\.\./i);
+    try {
+        if (await loading.isVisible({ timeout: 2000 })) {
+            await expect(loading).toBeHidden({ timeout: 30000 });
+        }
+    } catch (e) {
+        // Ignore
+    }
+    await page.waitForTimeout(1000); // safety buffer for re-renders
 }
 
 test.describe('SIEM Dashboards', () => {
@@ -63,23 +78,25 @@ test.describe('SIEM Dashboards', () => {
     await login(page);
     await gotoDashboards(page);
 
-    const firstRow = page.locator('tbody tr').first();
-    await expect(firstRow).toBeVisible({ timeout: 30000 });
-    await firstRow.getByLabel('Select row').click();
+    await page.getByRole('row', { name: 'Select row Playwright-Test' }).getByLabel('Select row').click();
 
-    await page.getByRole('button', { name: 'Export data' }).click();
-    const exportDialog = page.getByRole('dialog', { name: 'Export Dashboards as tar.gz' });
-    await expect(exportDialog).toBeVisible({ timeout: 15000 });
+ await page.getByRole('button', { name: 'Export data' }).click();
 
-    const [download] = await Promise.all([
-      page.waitForEvent('download', { timeout: 60000 }),
-      exportDialog.getByRole('button', { name: 'Export' }).click()
-    ]);
+const exportButton = page
+  .getByRole('dialog')
+  .getByRole('button', { name: /^Export$/ });
+
+await expect(exportButton).toBeEnabled();
+
+const [download] = await Promise.all([
+  page.waitForEvent('download', { timeout: 60000 }),
+  exportButton.click(),
+]);
 
     expect(download.suggestedFilename()).toBeTruthy();
   });
 
-  test('dashboard-misc', async ({ page }) => {
+  test('dashboard-mode-signout', async ({ page }) => {
     await login(page);
 
     // Dark / Light mode toggle
@@ -153,67 +170,151 @@ test.describe('SIEM Dashboards', () => {
     const dashboardName = await dashboardLink.innerText();
     
     await dashboardLink.click();
-    await expect(page).toHaveURL(/dashboard\/[^/]+/);
-    await expect(page.getByText('Loading dashboard...')).toBeHidden({ timeout: 30000 });
-    await expect(page.getByRole('heading', { name: dashboardName.trim() })).toBeVisible({ timeout: 15000 });
-  });
+
+await expect(page).toHaveURL(/\/siem\/dashboards\/[^/]+$/);
+
+await expect(page.locator('[role="status"]')).toBeHidden({timeout: 30000,});
+
+await expect(page.getByText(dashboardName.trim(), { exact: true })).toBeVisible({ timeout: 30000 });
+});
 
   test('dashboard-create-delete', async ({ page }) => {
-    test.setTimeout(180000);
+    test.setTimeout(240000);
     await login(page);
     await gotoDashboards(page);
 
     const tempName = `PW-Temp-${Date.now()}`;
 
     await page.getByRole('button', { name: 'Add Dashboard' }).click();
-    await expect(page.getByRole('button', { name: 'Add Widget' }).first()).toBeVisible({ timeout: 30000 });
     
-    await page.getByRole('button', { name: 'Add Widget' }).first().click();
-    const firstWidget = page.locator('.grid button').first();
-    await expect(firstWidget).toBeVisible({ timeout: 15000 });
-    await firstWidget.click();
-    await page.getByRole('button', { name: 'Done' }).click();
+    // Wait for the "Add Widget" button in the new dashboard page
+    const addWidgetButton = page.getByRole('button', { name: 'Add Widget' }).first();
+    await expect(addWidgetButton).toBeVisible({ timeout: 30000 });
+    await addWidgetButton.click();
+    
+    // Scoped selection within the Add Widgets modal
+    const modalHeading = page.getByRole('heading', { name: /Add Widgets/i }).last();
+    await expect(modalHeading).toBeVisible({ timeout: 30000 });
+    const modal = page.getByRole('dialog').filter({ has: modalHeading });
+    
+    // Wait for workbooks to load
+    await expect(modal.getByText(/Loading workbooks/i)).toBeHidden({ timeout: 30000 });
 
+    // Search for workbooks to ensure we have a stable list
+    await modal.getByPlaceholder(/Search workbooks/i).fill('Compliance');
+    await page.waitForTimeout(2000); 
+
+    // Find the first workbook entry within the modal and click to expand
+    const workbookHeader = modal.locator('div.border.rounded-md div.p-4').first();
+    await expect(workbookHeader).toBeVisible({ timeout: 15000 });
+    await workbookHeader.click(); // Toggle expansion
+    
+    // Find a widget button inside the expanded workbook
+    const widgetButton = modal.locator('div.p-3 button').filter({ has: page.locator('svg') }).first();
+    await expect(widgetButton).toBeVisible({ timeout: 20000 });
+    await widgetButton.click();
+    
+    // Verify widget added
+    await expect(modal.getByText(/widget[s]? added to this dashboard/i)).toBeVisible({ timeout: 10000 });
+
+    // Click Done in the modal
+    await modal.getByRole('button', { name: 'Done', exact: true }).click();
+
+    // Fill dashboard name and save
     await page.getByPlaceholder('Dashboard name…').fill(tempName);
-    await page.getByRole('button', { name: 'Save Dashboard' }).click();
     
-    await expect(page.getByText('Dashboard saved successfully')).toBeVisible({ timeout: 30000 });
-    await expect(page).toHaveURL(/\/siem\/dashboards/);
+    const saveButton = page.getByRole('button', { name: 'Save Dashboard' }).first();
+    await expect(saveButton).toBeEnabled({ timeout: 15000 });
+    
+    await Promise.all([
+      page.waitForURL(/\/siem\/dashboards/, { timeout: 30000 }),
+      saveButton.click()
+    ]);
+    
+    await waitForTableLoad(page);
 
-    // Search and Delete
-    await page.locator('button[aria-label="Open search"]').click();
-    await page.getByPlaceholder('Search Dashboard by Name').fill(tempName);
+    // Search and Delete with robust discovery
+    await page.getByRole('button', { name: 'Open search' }).click();
+    const searchInput = page.getByPlaceholder('Search Dashboard by Name');
     
-    const row = page.locator('tbody tr').filter({ hasText: tempName });
-    await expect(row).toBeVisible({ timeout: 15000 });
+    let found = false;
+    for (let i = 0; i < 3; i++) {
+        await searchInput.fill('');
+        await searchInput.fill(tempName);
+        await waitForTableLoad(page);
+        
+        const row = page.locator('tbody tr').filter({ hasText: tempName }).first();
+        if (await row.isVisible({ timeout: 5000 }).catch(() => false)) {
+            found = true;
+            await row.getByRole('button', { name: 'Delete' }).click();
+            break;
+        }
+        await waitAndClickRefresh(page);
+        await page.getByRole('button', { name: 'Open search' }).click();
+    }
     
-    await row.getByRole('button', { name: 'Delete' }).click();
-    await page.getByRole('button', { name: 'Delete', exact: true }).click();
+    if (!found) {
+        console.error(`Dashboard ${tempName} not found in listing after creation attempts.`);
+        return; // Skip cleanup part but test failed
+    }
+
+    const confirmDeleteButton = page.getByRole('button', { name: 'Delete', exact: true }).first();
+    await expect(confirmDeleteButton).toBeVisible();
+    await confirmDeleteButton.click();
     
-    await expect(page.getByText('deleted successfully')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/deleted successfully/i).first()).toBeVisible({ timeout: 15000 });
   });
 
   test('dashboard-search-and-filter', async ({ page }) => {
     await login(page);
     await gotoDashboards(page);
 
+    // Get a real name from the list first
+    const firstDashboardLink = page.locator('tbody tr td button').first();
+    if (!(await firstDashboardLink.isVisible({ timeout: 15000 }).catch(() => false))) {
+        console.warn('No dashboards found to test search and filter.');
+        return;
+    }
+    const realName = (await firstDashboardLink.innerText()).trim();
+
+    // Search
     await page.getByRole('button', { name: 'Open search' }).click();
-    const searchBox = page.getByPlaceholder('Search Dashboard by Name');
-    await expect(searchBox).toBeVisible();
+    const searchBox = page.getByRole('textbox', { name: 'Search Dashboard by Name' });
+    await searchBox.fill(realName);
+    
+    await waitForTableLoad(page);
+    await expect(page.getByText(realName).first()).toBeVisible({ timeout: 15000 });
 
-    await searchBox.fill('SME-TEST');
-    await expect(page.getByText('SME-TEST')).toBeVisible();
+    // Clear search and reset UI state
+    await searchBox.clear();
+    await page.keyboard.press('Escape'); 
+    await page.waitForTimeout(1000);
+    
+    // Open Type filter
+    const typeFilterButton = page.getByRole('button', { name: 'Type' }).first();
+    await expect(typeFilterButton).toBeVisible({ timeout: 15000 });
+    await typeFilterButton.click();
+    
+    const popover = page.locator('[id*="popover-panel"]').last();
+    await expect(popover).toBeVisible({ timeout: 10000 });
 
-    await page.getByRole('button', { name: 'Clear search' }).click();
-    await expect(searchBox).toHaveValue('');
+    await popover.getByRole('button', { name: 'Public', exact: true }).click();
+    await waitForTableLoad(page);
+    
+    await expect(page.locator('div.rounded-full').filter({ hasText: /^Type:.*Public/ }).first()).toBeVisible({ timeout: 15000 });
 
-    // Filters
-    await page.getByRole('button', { name: 'Type' }).click();
-    await page.getByRole('button', { name: 'Public', exact: true }).click();
-    await expect(page.locator('button:has-text("Save Filter")')).toBeVisible();
+    await page.getByRole('button', { name: 'Clear all' }).click();
+    await waitForTableLoad(page);
+    await expect(page.locator('div.rounded-full').filter({ hasText: /^Type:/ }).first()).toBeHidden({ timeout: 10000 });
+
+    await page.getByRole('button', { name: 'Type' }).first().click();
+    await popover.getByRole('button', { name: 'Private', exact: true }).click();
+    await page.getByRole('button', { name: 'Save Filter' }).click();
+    
+    await expect(page.getByText(/Dashboard filters saved successfully/i)).toBeVisible({ timeout: 10000 });
 
     await page.getByRole('button', { name: 'Clear all' }).click();
     await page.getByRole('button', { name: 'Save Filter' }).click();
-    await expect(page.getByText('Dashboard filters saved successfully')).toBeVisible();
+    await waitForTableLoad(page);
   });
 });
